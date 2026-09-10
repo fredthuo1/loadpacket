@@ -50,3 +50,7 @@ Thumbs.db
 .terraform/
 *.tfstate
 *.tfstate.*
+
+# Local LoadPacket document storage
+apps/api/storage/
+storage/
