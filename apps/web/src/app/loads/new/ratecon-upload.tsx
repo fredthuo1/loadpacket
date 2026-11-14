@@ -1,17 +1,13 @@
 "use client";
+import { apiFetch, API_BASE_URL } from "@/lib/api/api-fetch";
+import { buttonClass } from "@/components/management-ui";
+import { UiIcon } from "@/components/ui-icon";
 
 import { ChangeEvent, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-];
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
+const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg"];
 
 type UploadedDocument = {
   id: string;
@@ -26,13 +22,15 @@ type UploadedDocument = {
 };
 
 export default function RateConUpload() {
+  const router = useRouter();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [error, setError] = useState<string | null>(null);
+
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedDocument, setUploadedDocument] =
-    useState<UploadedDocument | null>(null);
 
   function handleChooseFile() {
     fileInputRef.current?.click();
@@ -42,22 +40,37 @@ export default function RateConUpload() {
     const file = event.target.files?.[0];
 
     setError(null);
-    setUploadedDocument(null);
 
     if (!file) {
       return;
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (
+      !ALLOWED_TYPES.includes(file.type) ||
+      !/\.(pdf|png|jpe?g)$/i.test(file.name)
+    ) {
       setSelectedFile(null);
-      setError("Please choose a PDF, JPG, or PNG file.");
+
+      setError("Upload a PDF, PNG or JPEG Rate Confirmation.");
+
       event.target.value = "";
       return;
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setSelectedFile(null);
-      setError("The file must be 10 MB or smaller.");
+
+      setError("The document must be 10 MB or smaller.");
+
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size === 0) {
+      setSelectedFile(null);
+
+      setError("The selected document is empty.");
+
       event.target.value = "";
       return;
     }
@@ -68,7 +81,6 @@ export default function RateConUpload() {
   function handleRemoveFile() {
     setSelectedFile(null);
     setError(null);
-    setUploadedDocument(null);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -83,19 +95,16 @@ export default function RateConUpload() {
 
     setIsUploading(true);
     setError(null);
-    setUploadedDocument(null);
 
     try {
       const formData = new FormData();
+
       formData.append("file", selectedFile);
 
-      const response = await fetch(
-        `${API_BASE_URL}/documents/ratecon`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+      const response = await apiFetch(`${API_BASE_URL}/documents/ratecon`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) {
         let message = "Unable to upload Rate Confirmation.";
@@ -111,22 +120,21 @@ export default function RateConUpload() {
             message = body.message;
           }
         } catch {
-          // Keep the default error message.
+          // Keep the default message.
         }
 
         throw new Error(message);
       }
 
-      const document =
-        (await response.json()) as UploadedDocument;
+      const document = (await response.json()) as UploadedDocument;
 
-      setUploadedDocument(document);
+      router.push(`/loads/new/review/${document.id}`);
     } catch (uploadError) {
-      if (uploadError instanceof Error) {
-        setError(uploadError.message);
-      } else {
-        setError("Unable to upload Rate Confirmation.");
-      }
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Unable to upload Rate Confirmation.",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -137,29 +145,36 @@ export default function RateConUpload() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+        accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
         onChange={handleFileChange}
         className="hidden"
       />
 
       {!selectedFile ? (
         <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-          <div className="text-4xl">📄</div>
+          <div className="mx-auto w-fit rounded-xl bg-blue-50 p-3 text-blue-700">
+            <UiIcon name="document" className="h-8 w-8" />
+          </div>
 
           <p className="mt-4 font-semibold text-slate-900">
-            Drop your RateCon here
+            Upload your Rate Confirmation
           </p>
 
-          <p className="mt-1 text-sm text-slate-500">
-            PDF, JPG or PNG · Maximum 10 MB
+          <p className="mt-1 text-sm text-slate-600">
+            PDF, PNG or JPEG · Maximum 10 MB
+          </p>
+
+          <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-slate-600">
+            LoadPacket will read the Rate Confirmation and prepare the load
+            details for your review.
           </p>
 
           <button
             type="button"
             onClick={handleChooseFile}
-            className="mt-5 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+            className={`mt-5 ${buttonClass}`}
           >
-            Choose File
+            Choose document
           </button>
         </div>
       ) : (
@@ -170,68 +185,41 @@ export default function RateConUpload() {
                 Rate Confirmation selected
               </p>
 
-              <p className="mt-2 font-semibold text-slate-900">
+              <p className="mt-2 break-all font-semibold text-slate-900">
                 {selectedFile.name}
               </p>
 
               <p className="mt-1 text-sm text-slate-600">
                 {formatFileSize(selectedFile.size)}
               </p>
+
+              <p className="mt-1 text-xs text-slate-600">{selectedFile.type}</p>
             </div>
 
             <button
               type="button"
               onClick={handleRemoveFile}
               disabled={isUploading}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-slate-100 disabled:text-slate-600"
             >
               Remove
             </button>
           </div>
 
-          {!uploadedDocument && (
-            <button
-              type="button"
-              onClick={handleUpload}
-              disabled={isUploading}
-              className="mt-5 w-full rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isUploading
-                ? "Uploading..."
-                : "Continue"}
-            </button>
-          )}
-
-          {uploadedDocument && (
-            <div className="mt-5 rounded-lg border border-emerald-300 bg-white p-4">
-              <p className="font-semibold text-emerald-700">
-                ✓ Rate Confirmation uploaded
-              </p>
-
-              <p className="mt-2 text-sm text-slate-600">
-                Document ID
-              </p>
-
-              <p className="mt-1 break-all font-mono text-xs text-slate-900">
-                {uploadedDocument.id}
-              </p>
-
-              <p className="mt-3 text-sm text-slate-600">
-                Status:{" "}
-                <span className="font-semibold text-slate-900">
-                  {uploadedDocument.status}
-                </span>
-              </p>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => void handleUpload()}
+            disabled={isUploading}
+            className={`mt-5 w-full ${buttonClass}`}
+          >
+            {isUploading ? "Uploading RateCon..." : "Continue"}
+          </button>
         </div>
       )}
 
       {error && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
-          <p className="text-sm font-medium text-red-700">
-            {error}
-          </p>
+          <p className="text-sm font-medium text-red-700">{error}</p>
         </div>
       )}
     </div>

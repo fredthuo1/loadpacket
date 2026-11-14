@@ -1,0 +1,1317 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model DocumentProcessingRun {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  documentId String @map("document_id") @db.Uuid
+  documentVersionId String @map("document_version_id") @db.Uuid
+  sourceChecksum String @map("source_checksum") @db.VarChar(64)
+  pipelineKey String @map("pipeline_key") @db.VarChar(64)
+  requestedByUserId String @map("requested_by_user_id") @db.Uuid
+  status String @default("QUEUED") @db.VarChar(16)
+  attemptCount Int @default(0) @map("attempt_count")
+  leaseToken String? @map("lease_token") @db.Uuid
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  startedAt DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  errorCode String? @map("error_code") @db.VarChar(64)
+  attempts Json @default("[]")
+  result Json?
+  review Json?
+  reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt DateTime? @map("reviewed_at")
+  createdLoadId String? @map("created_load_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  source DocumentVersion @relation(fields: [documentVersionId, documentId, organizationId], references: [id, documentId, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  requestedBy User @relation("ProcessingRequester", fields: [requestedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  reviewedBy User? @relation("ProcessingReviewer", fields: [reviewedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  createdLoad Load? @relation(fields: [createdLoadId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  @@unique([id, organizationId])
+  @@unique([organizationId, documentVersionId, pipelineKey])
+  @@unique([organizationId, createdLoadId])
+  @@index([status, leaseExpiresAt])
+  @@index([organizationId, createdAt])
+  @@map("document_processing_runs")
+}
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LoadAssignmentStatus {
+  ASSIGNED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DocumentType {
+  RATE_CONFIRMATION
+  BOL
+  POD
+  CARRIER_INVOICE
+  LUMPER_RECEIPT
+  SCALE_TICKET
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADED
+  TEXT_EXTRACTED
+  REVIEW_REQUIRED
+  CONFIRMED
+}
+
+enum LoadStatus {
+  BOOKED
+  IN_TRANSIT
+  DELIVERED
+  PAYMENT_READY
+  INVOICED
+  PAID
+  CANCELLED
+}
+
+enum StopType {
+  PICKUP
+  DELIVERY
+}
+
+enum RequirementLevel {
+  REQUIRED
+  CONDITIONAL
+}
+
+enum RequirementStatus {
+  MISSING
+  RECEIVED
+  ACCEPTED
+  WAIVED
+  REJECTED
+}
+
+enum LoadEventType {
+  LOAD_CORRECTED
+  DRIVER_UNASSIGNED
+  LOAD_CANCELLED
+  LOAD_CREATED
+  DRIVER_ASSIGNED
+  DRIVER_ACCEPTED
+  LOAD_STARTED
+
+  ARRIVED_PICKUP
+  DEPARTED_PICKUP
+  ARRIVED_DELIVERY
+  DEPARTED_DELIVERY
+
+  DOCUMENT_CAPTURED
+  DOCUMENT_SIGNATURE_CAPTURED
+  DOCUMENT_VALIDATED
+  DOCUMENT_REJECTED
+  DOCUMENT_WAIVED
+
+  DELIVERY_CONFIRMED
+  LOAD_COMPLETED
+
+  AGREEMENT_CREATED
+  AGREEMENT_ACCEPTED
+  AGREEMENT_EXECUTED
+  AGREEMENT_SUPERSEDED
+
+  CHARGE_OPPORTUNITY_DETECTED
+  CHARGE_OPPORTUNITY_APPROVED
+  CHARGE_OPPORTUNITY_DISMISSED
+  CHARGE_OPPORTUNITY_BILLED
+
+  PAYMENT_READY
+  INVOICE_CREATED
+  BILLING_SUBMITTED
+  PAYMENT_RECEIVED
+}
+
+enum LoadEventActorType {
+  SYSTEM
+  OWNER
+  DRIVER
+  BROKER
+  SHIPPER
+  RECEIVER
+  OTHER
+}
+
+enum LoadChargeOpportunityType {
+  LUMPER_REIMBURSEMENT
+  DETENTION
+  LAYOVER
+  TONU
+  SCALE_REIMBURSEMENT
+  OTHER
+}
+
+enum LoadChargeOpportunityStatus {
+  DETECTED
+  APPROVED
+  DISMISSED
+  BILLED
+}
+
+enum AgreementType {
+  RATE_CONFIRMATION
+  LOAD_AMENDMENT
+  BROKER_CARRIER
+  CHARGE_APPROVAL
+  BILLING_APPROVAL
+  OTHER
+}
+
+enum AgreementStatus {
+  DRAFT
+  PENDING
+  EXECUTED
+  SUPERSEDED
+  VOIDED
+}
+
+enum AgreementPartyRole {
+  BROKER
+  CARRIER
+  OWNER
+  DRIVER
+  SHIPPER
+  RECEIVER
+  OTHER
+}
+
+enum AgreementAcceptanceMethod {
+  CLICK_ACCEPT
+  DRAWN_SIGNATURE
+  EXTERNAL_ESIGN
+}
+
+enum ExternalTransactionRole {
+  BROKER
+  SHIPPER
+  RECEIVER
+  OTHER
+}
+
+model OrganizationSubscription {
+  organizationId String @id @map("organization_id") @db.Uuid
+  state String @default("UNKNOWN") @db.VarChar(16)
+  revision BigInt @default(0)
+  enrolledAt DateTime? @map("enrolled_at") @db.Timestamptz(3)
+  firstTrialStartedAt DateTime? @map("first_trial_started_at") @db.Timestamptz(3)
+  planId String? @map("plan_id") @db.VarChar(100)
+  planVersion Int? @map("plan_version")
+  planSnapshot Json? @map("plan_snapshot")
+  cadence String? @db.VarChar(8)
+  paidPeriodStartedAt DateTime? @map("paid_period_started_at") @db.Timestamptz(3)
+  paidPeriodEndsAt DateTime? @map("paid_period_ends_at") @db.Timestamptz(3)
+  firstPaymentFailedAt DateTime? @map("first_payment_failed_at") @db.Timestamptz(3)
+  cancelAtPeriodEnd Boolean @default(false) @map("cancel_at_period_end")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  @@map("organization_subscriptions")
+}
+
+model OrganizationBillingCustomer {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  provider String @db.VarChar(32)
+  environment String @db.VarChar(16)
+  providerAccountId String @map("provider_account_id") @db.VarChar(200)
+  externalCustomerId String @map("external_customer_id") @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  links OrganizationBillingLink[]
+  @@unique([id, organizationId, provider, environment, providerAccountId], map: "billing_customer_scope_key")
+  @@unique([provider, environment, providerAccountId, externalCustomerId], map: "billing_customer_external_key")
+  @@index([organizationId])
+  @@map("organization_billing_customers")
+}
+
+model OrganizationBillingLink {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  customerId String @map("customer_id") @db.Uuid
+  provider String @db.VarChar(32)
+  environment String @db.VarChar(16)
+  providerAccountId String @map("provider_account_id") @db.VarChar(200)
+  externalSubscriptionId String @map("external_subscription_id") @db.VarChar(200)
+  isCurrent Boolean @default(true) @map("is_current")
+  retiredAt DateTime? @map("retired_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customer OrganizationBillingCustomer @relation(fields: [customerId, organizationId, provider, environment, providerAccountId], references: [id, organizationId, provider, environment, providerAccountId], onDelete: Restrict, onUpdate: NoAction, map: "billing_link_customer_scope_fk")
+  events OrganizationBillingEvent[]
+  @@unique([id, organizationId], map: "billing_link_tenant_key")
+  @@unique([provider, environment, providerAccountId, externalSubscriptionId], map: "billing_link_external_key")
+  @@index([organizationId, createdAt])
+  @@map("organization_billing_links")
+}
+
+model OrganizationBillingEvent {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  linkId String? @map("link_id") @db.Uuid
+  actorId String? @map("actor_id") @db.Uuid
+  source String @db.VarChar(16)
+  sourceScope String @map("source_scope") @db.VarChar(512)
+  sourceEventId String @map("source_event_id") @db.VarChar(200)
+  kind String @db.VarChar(64)
+  payloadHash String @map("payload_hash") @db.Char(64)
+  schemaVersion Int @default(1) @map("schema_version")
+  normalizedInput Json @map("normalized_input")
+  effectiveAt DateTime @map("effective_at") @db.Timestamptz(3)
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz(3)
+  appliedRevision BigInt? @map("applied_revision")
+  beforeSnapshot Json? @map("before_snapshot")
+  afterSnapshot Json? @map("after_snapshot")
+  outcome String? @db.VarChar(16)
+  response Json?
+  finalizedAt DateTime? @map("finalized_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  link OrganizationBillingLink? @relation(fields: [linkId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "billing_event_link_tenant_fk")
+  actor User? @relation(fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "billing_event_actor_tenant_fk")
+  buckets OrganizationUsageBucket[]
+  reservations OrganizationUsageReservation[]
+  grants AssignmentEntitlementGrant[]
+  @@unique([id, organizationId], map: "billing_event_tenant_key")
+  @@unique([source, sourceScope, sourceEventId], map: "billing_event_delivery_key")
+  @@index([organizationId, receivedAt])
+  @@index([outcome, receivedAt])
+  @@map("organization_billing_events")
+}
+
+model OrganizationUsageBucket {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  capability String @db.VarChar(32)
+  windowKey String @map("window_key") @db.VarChar(128)
+  windowStartedAt DateTime @map("window_started_at") @db.Timestamptz(3)
+  windowEndsAt DateTime @map("window_ends_at") @db.Timestamptz(3)
+  planVersion Int @map("plan_version")
+  limit BigInt?
+  used BigInt @default(0)
+  reserved BigInt @default(0)
+  configurationEventId String @map("configuration_event_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  configurationEvent OrganizationBillingEvent @relation(fields: [configurationEventId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "usage_bucket_config_tenant_fk")
+  reservations OrganizationUsageReservation[]
+  @@unique([id, organizationId], map: "usage_bucket_tenant_key")
+  @@unique([organizationId, capability, windowKey], map: "usage_bucket_window_key")
+  @@index([organizationId, capability, windowStartedAt])
+  @@map("organization_usage_buckets")
+}
+
+model OrganizationUsageReservation {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  bucketId String @map("bucket_id") @db.Uuid
+  commandEventId String @map("command_event_id") @db.Uuid
+  operationKey String @map("operation_key") @db.VarChar(200)
+  requestHash String @map("request_hash") @db.Char(64)
+  quantity BigInt
+  state String @default("RESERVED") @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  finalizedAt DateTime? @map("finalized_at") @db.Timestamptz(3)
+  outcomeEvidence Json? @map("outcome_evidence")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  bucket OrganizationUsageBucket @relation(fields: [bucketId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "usage_reservation_bucket_tenant_fk")
+  commandEvent OrganizationBillingEvent @relation(fields: [commandEventId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "usage_reservation_event_tenant_fk")
+  @@unique([id, organizationId], map: "usage_reservation_tenant_key")
+  @@unique([organizationId, operationKey], map: "usage_reservation_operation_key")
+  @@index([bucketId, organizationId, state])
+  @@map("organization_usage_reservations")
+}
+
+model AssignmentEntitlementGrant {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  loadId String @map("load_id") @db.Uuid
+  driverId String @map("driver_id") @db.Uuid
+  // Historical snapshot: LoadAssignment rows may be reused after reassignment.
+  assignmentId String @map("assignment_id") @db.Uuid
+  assignmentGenerationKey String @map("assignment_generation_key") @db.Char(64)
+  assignedAt DateTime @map("assigned_at") @db.Timestamptz(3)
+  assignmentEventId String? @map("assignment_event_id") @db.Uuid
+  decisionEventId String @map("decision_event_id") @db.Uuid
+  subscriptionRevision BigInt @map("subscription_revision")
+  policyVersion Int @map("policy_version")
+  origin String @db.VarChar(32)
+  evidence Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  load Load @relation(fields: [loadId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "assignment_grant_load_tenant_fk")
+  driver Driver @relation(fields: [driverId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "assignment_grant_driver_tenant_fk")
+  assignmentEvent LoadEvent? @relation(fields: [assignmentEventId, organizationId, loadId], references: [id, organizationId, loadId], onDelete: Restrict, onUpdate: NoAction, map: "assignment_grant_occurrence_fk")
+  decisionEvent OrganizationBillingEvent @relation(fields: [decisionEventId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "assignment_grant_decision_tenant_fk")
+  @@unique([organizationId, loadId, assignmentGenerationKey], map: "assignment_grant_generation_key")
+  @@index([organizationId, driverId, loadId])
+  @@map("assignment_entitlement_grants")
+}
+
+model Organization {
+  billingSubscription OrganizationSubscription?
+  billingCustomers OrganizationBillingCustomer[]
+  billingLinks OrganizationBillingLink[]
+  billingEvents OrganizationBillingEvent[]
+  usageBuckets OrganizationUsageBucket[]
+  usageReservations OrganizationUsageReservation[]
+  assignmentEntitlements AssignmentEntitlementGrant[]
+  processingRuns DocumentProcessingRun[]
+  staffInvitations StaffInvitation[]
+  driverSettlements DriverSettlement[]
+  settlementWork DriverSettlementWork[]
+  settlementItems DriverSettlementItem[]
+  settlementPayments DriverSettlementPayment[]
+  carrierInvoices CarrierInvoice[]
+  carrierInvoiceCharges CarrierInvoiceCharge[]
+  signatures DocumentSignature[]
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  dbaName String? @map("dba_name")
+  mcNumber String? @map("mc_number")
+  usdotNumber String? @map("usdot_number")
+  phone String?
+  email String?
+  addressLine1 String? @map("address_line_1")
+  addressLine2 String? @map("address_line_2")
+  city String?
+  state String?
+  postalCode String? @map("postal_code")
+  country String @default("US")
+  timezone String @default("America/Chicago")
+  defaultPaymentTermsDays Int @default(30) @map("default_payment_terms_days")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  documents            Document[]
+  documentVersions     DocumentVersion[]
+  loads                Load[]
+  loadStops            LoadStop[]
+  loadDocuments        LoadDocument[]
+  loadRequirements     LoadRequirement[]
+  drivers              Driver[]
+  loadAssignments      LoadAssignment[]
+  loadEvents           LoadEvent[]
+  chargeOpportunities  LoadChargeOpportunity[]
+  agreements           Agreement[]
+  agreementVersions    AgreementVersion[]
+  agreementAcceptances AgreementAcceptance[]
+  externalAccesses     ExternalTransactionAccess[]
+  users                User[]
+  driverInvitations    DriverInvitation[]
+  organizationDocuments OrganizationDocument[]
+  driverDocuments DriverDocument[]
+  loadPayments LoadPayment[]
+  financialTransactions FinancialTransaction[]
+  financialImports FinancialImportBatch[]
+  financialImportRows FinancialImportRow[]
+  historicalLoads HistoricalLoadRecord[]
+  financialAudit FinancialAuditEvent[]
+
+  @@map("organizations")
+}
+
+model LoadAssignment {
+  id             String               @id @default(uuid()) @db.Uuid
+  organizationId String               @map("organization_id") @db.Uuid
+  loadId         String               @map("load_id") @db.Uuid
+  driverId       String               @map("driver_id") @db.Uuid
+  status         LoadAssignmentStatus @default(ASSIGNED)
+
+  assignedAt  DateTime  @default(now()) @map("assigned_at")
+  acceptedAt  DateTime? @map("accepted_at")
+  completedAt DateTime? @map("completed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load         Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  driver       Driver       @relation(fields: [driverId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, loadId])
+  @@index([organizationId, driverId])
+  @@index([organizationId, status])
+  @@map("load_assignments")
+}
+
+model Document {
+  financialTransactions FinancialTransaction[]
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  type           DocumentType
+  status         DocumentStatus @default(UPLOADED)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  versions            DocumentVersion[]
+  loadDocuments       LoadDocument[]
+  chargeOpportunities LoadChargeOpportunity[]
+
+  organizationDocument OrganizationDocument?
+  driverDocument DriverDocument?
+
+  @@unique([id, organizationId])
+  @@index([organizationId])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  processingRuns DocumentProcessingRun[]
+  driverSettlements DriverSettlement[]
+  carrierInvoices CarrierInvoice[]
+  signatures DocumentSignature[]
+  id               String   @id @default(uuid()) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  documentId       String   @map("document_id") @db.Uuid
+  versionNumber    Int      @map("version_number")
+  originalFileName String   @map("original_file_name")
+  mimeType         String   @map("mime_type")
+  sizeBytes        Int      @map("size_bytes")
+  checksum         String   @db.VarChar(64)
+  storageKey       String   @map("storage_key")
+  createdAt        DateTime @default(now()) @map("created_at")
+  uploadedByUserId String? @map("uploaded_by_user_id") @db.Uuid
+  uploadKey String? @map("upload_key") @db.Uuid
+  issuedAt DateTime? @map("issued_at") @db.Date
+  expiresAt DateTime? @map("expires_at") @db.Date
+  uploadedBy User? @relation(fields: [uploadedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  document          Document           @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  agreementVersions AgreementVersion[]
+  currentRequirements LoadRequirement[] @relation("CurrentRequirementVersion")
+  reviewedRequirements LoadRequirement[] @relation("ReviewedRequirementVersion")
+
+  @@unique([id, documentId, organizationId])
+  @@unique([documentId, versionNumber])
+  @@unique([id, organizationId])
+  @@unique([organizationId, uploadKey])
+  @@unique([organizationId, storageKey])
+  @@index([organizationId, checksum])
+  @@map("document_versions")
+}
+
+enum CompanyDocumentType {
+  W9
+  CERTIFICATE_OF_INSURANCE
+  OPERATING_AUTHORITY
+  PERMIT
+  OTHER
+}
+
+enum DriverDocumentType {
+  CDL
+  MEDICAL_CERTIFICATE
+  MVR
+  OTHER
+}
+
+model OrganizationDocument {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  documentId String @unique @map("document_id") @db.Uuid
+  type CompanyDocumentType
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  document Document @relation(fields: [documentId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@unique([documentId, organizationId])
+  @@index([organizationId, type])
+  @@map("organization_documents")
+}
+
+model DriverDocument {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  driverId String @map("driver_id") @db.Uuid
+  documentId String @unique @map("document_id") @db.Uuid
+  type DriverDocumentType
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  driver Driver @relation(fields: [driverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  document Document @relation(fields: [documentId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@unique([documentId, organizationId])
+  @@index([organizationId, driverId, type])
+  @@map("driver_documents")
+}
+
+model Load {
+  assignmentEntitlements AssignmentEntitlementGrant[]
+  processingRuns DocumentProcessingRun[]
+  settlementWork DriverSettlementWork[]
+  carrierInvoices CarrierInvoice[]
+  signatures DocumentSignature[]
+  financialTransactions FinancialTransaction[]
+  id             String     @id @default(uuid()) @db.Uuid
+  organizationId String     @map("organization_id") @db.Uuid
+  status         LoadStatus @default(BOOKED)
+  loadNumber     String     @map("load_number")
+
+  brokerName    String  @map("broker_name")
+  brokerContact String? @map("broker_contact")
+  equipment     String?
+
+  currency      String   @default("USD") @db.VarChar(3)
+  linehaul      Decimal? @db.Decimal(12, 2)
+  fuelSurcharge Decimal? @map("fuel_surcharge") @db.Decimal(12, 2)
+  totalRate     Decimal  @map("total_rate") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stops        LoadStop[]
+  documents    LoadDocument[]
+  requirements LoadRequirement[]
+  assignments  LoadAssignment[]
+
+  events              LoadEvent[]
+  chargeOpportunities LoadChargeOpportunity[]
+  agreements          Agreement[]
+  externalAccesses    ExternalTransactionAccess[]
+
+  invoiceNumber         String?   @map("invoice_number")
+  invoiceIssuedAt       DateTime? @map("invoice_issued_at")
+  billingSubmittedAt    DateTime? @map("billing_submitted_at")
+  paymentTermsDays      Int?      @map("payment_terms_days")
+  paymentDueAt          DateTime? @map("payment_due_at")
+  billingRecipientName  String?   @map("billing_recipient_name")
+  billingRecipientEmail String?   @map("billing_recipient_email")
+  paidAt                DateTime? @map("paid_at")
+  amountPaid            Decimal?  @map("amount_paid") @db.Decimal(12, 2)
+  payments LoadPayment[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, loadNumber])
+  @@index([organizationId, status])
+  @@map("loads")
+}
+
+model LoadPayment {
+  invoiceId String? @map("invoice_id") @db.Uuid
+  invoice CarrierInvoice? @relation(fields: [invoiceId, organizationId, loadId], references: [id, organizationId, loadId], onDelete: Restrict, onUpdate: NoAction)
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  loadId String @map("load_id") @db.Uuid
+  amount Decimal @db.Decimal(12, 2)
+  currency String @db.VarChar(3)
+  idempotencyKey String @map("idempotency_key") @db.VarChar(100)
+  recordedByUserId String? @map("recorded_by_user_id") @db.Uuid
+  recordedAt DateTime @map("recorded_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  load Load @relation(fields: [loadId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  recordedBy User? @relation(fields: [recordedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@unique([organizationId, loadId, idempotencyKey])
+  @@index([organizationId, loadId, recordedAt])
+  @@map("load_payments")
+  @@index([organizationId, invoiceId, recordedAt])
+}
+
+model LoadStop {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  loadId          String   @map("load_id") @db.Uuid
+  sequence        Int
+  type            StopType
+  facilityName    String?  @map("facility_name")
+  address         String
+  appointmentText String?  @map("appointment_text")
+  referenceNumber String?  @map("reference_number")
+  arrivedAt       DateTime? @map("arrived_at")
+  departedAt      DateTime? @map("departed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load         Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@unique([loadId, sequence])
+  @@index([organizationId, loadId])
+  @@map("load_stops")
+}
+
+model LoadDocument {
+  signatures DocumentSignature[]
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  loadId         String       @map("load_id") @db.Uuid
+  documentId     String       @map("document_id") @db.Uuid
+  role           DocumentType
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load         Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  document     Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, loadId, documentId, role])
+  @@index([organizationId, loadId])
+  @@map("load_documents")
+}
+
+model LoadRequirement {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  loadId         String            @map("load_id") @db.Uuid
+  documentType   DocumentType      @map("document_type")
+  requirement    RequirementLevel
+  status         RequirementStatus @default(MISSING)
+  currentVersionId String? @map("current_version_id") @db.Uuid
+  reviewedVersionId String? @map("reviewed_version_id") @db.Uuid
+  reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt DateTime? @map("reviewed_at")
+  reviewReason String? @map("review_reason") @db.VarChar(1000)
+  currentVersion DocumentVersion? @relation("CurrentRequirementVersion", fields: [currentVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewedVersion DocumentVersion? @relation("ReviewedRequirementVersion", fields: [reviewedVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewedBy User? @relation(fields: [reviewedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load         Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@unique([loadId, documentType])
+  @@index([organizationId, loadId])
+  @@index([organizationId, status])
+  @@map("load_requirements")
+}
+
+model Driver {
+  assignmentEntitlements AssignmentEntitlementGrant[]
+  settlements DriverSettlement[]
+  financialTransactions FinancialTransaction[]
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  firstName      String       @map("first_name")
+  lastName       String       @map("last_name")
+  phone          String?
+  email          String?
+  status         DriverStatus @default(ACTIVE)
+  cdlNumber String? @map("cdl_number")
+  cdlState String? @map("cdl_state")
+  cdlExpirationDate DateTime? @map("cdl_expiration_date") @db.Date
+  hireDate DateTime? @map("hire_date") @db.Date
+  notes String?
+  userId         String?      @unique @map("user_id") @db.Uuid
+  user           User?        @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignments  LoadAssignment[]
+  invitation DriverInvitation?
+  documents DriverDocument[]
+
+  @@unique([id, organizationId])
+  @@unique([userId, organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, lastName])
+  @@map("drivers")
+}
+
+enum DriverInvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+}
+
+model DriverInvitation {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  driverId String @unique @map("driver_id") @db.Uuid
+  email String
+  authUserId String? @unique @map("auth_user_id") @db.Uuid
+  status DriverInvitationStatus @default(PENDING)
+  firstSentAt DateTime @default(now()) @map("first_sent_at")
+  lastSentAt DateTime @default(now()) @map("last_sent_at")
+  acceptedAt DateTime? @map("accepted_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  driver Driver @relation(fields: [driverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@unique([driverId, organizationId])
+  @@index([organizationId, status])
+  @@map("driver_invitations")
+}
+
+enum UserRole {
+  OWNER
+  DISPATCHER
+  BACK_OFFICE
+  DRIVER
+}
+
+model User {
+  organizationBillingEvents OrganizationBillingEvent[]
+  processingRequested DocumentProcessingRun[] @relation("ProcessingRequester")
+  processingReviewed DocumentProcessingRun[] @relation("ProcessingReviewer")
+  staffInvitationsSent StaffInvitation[] @relation("StaffInviter")
+  staffInvitationsAccepted StaffInvitation[] @relation("StaffAcceptor")
+  staffInvitationsRevoked StaffInvitation[] @relation("StaffRevoker")
+  settlementsCreated DriverSettlement[] @relation("SettlementCreator")
+  settlementsReviewed DriverSettlement[] @relation("SettlementReviewer")
+  settlementsApproved DriverSettlement[] @relation("SettlementApprover")
+  settlementsCancelled DriverSettlement[] @relation("SettlementCanceller")
+  settlementPayments DriverSettlementPayment[]
+  carrierInvoices CarrierInvoice[]
+  signatures DocumentSignature[]
+  financialTransactions FinancialTransaction[]
+  financialImports FinancialImportBatch[]
+  financialAudit FinancialAuditEvent[]
+  id             String   @id @default(uuid()) @db.Uuid
+  authUserId     String   @unique @map("auth_user_id") @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  role           UserRole
+  firstName      String   @map("first_name")
+  lastName       String   @map("last_name")
+  email          String
+  phone          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  driver       Driver?
+  uploadedDocumentVersions DocumentVersion[]
+  reviewedRequirements LoadRequirement[]
+  recordedPayments LoadPayment[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, email])
+  @@index([organizationId, role])
+  @@map("users")
+}
+
+model LoadEvent {
+  assignmentEntitlements AssignmentEntitlementGrant[]
+  settlementWork DriverSettlementWork[]
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  loadId         String             @map("load_id") @db.Uuid
+  type           LoadEventType
+  actorType      LoadEventActorType @default(SYSTEM) @map("actor_type")
+  actorId        String?            @map("actor_id") @db.Uuid
+  actorName      String?            @map("actor_name")
+  occurredAt     DateTime           @default(now()) @map("occurred_at")
+  metadata       Json?
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load         Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, loadId, occurredAt])
+  @@index([organizationId, type])
+  @@map("load_events")
+  @@unique([id, organizationId, loadId])
+}
+
+model LoadChargeOpportunity {
+  invoiceAllocations CarrierInvoiceCharge[]
+  id               String                      @id @default(uuid()) @db.Uuid
+  organizationId   String                      @map("organization_id") @db.Uuid
+  loadId           String                      @map("load_id") @db.Uuid
+  sourceDocumentId String?                     @map("source_document_id") @db.Uuid
+  detectionKey     String?                     @map("detection_key") @db.VarChar(100)
+  evidence         Json?
+  type             LoadChargeOpportunityType
+  status           LoadChargeOpportunityStatus @default(DETECTED)
+  amount           Decimal?                    @db.Decimal(12, 2)
+  currency         String                      @default("USD") @db.VarChar(3)
+  description      String?
+  detectedAt       DateTime                    @default(now()) @map("detected_at")
+  resolvedAt       DateTime?                   @map("resolved_at")
+  createdAt        DateTime                    @default(now()) @map("created_at")
+  updatedAt        DateTime                    @updatedAt @map("updated_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load           Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  sourceDocument Document?    @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, loadId])
+  @@index([organizationId, status])
+  @@index([loadId, type])
+  @@unique([organizationId, loadId, detectionKey])
+  @@map("load_charge_opportunities")
+  @@unique([id, organizationId, loadId])
+}
+
+model CarrierInvoice {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  loadId String @map("load_id") @db.Uuid
+  originalInvoiceId String? @map("original_invoice_id") @db.Uuid
+  invoiceNumber String @map("invoice_number") @db.VarChar(150)
+  issuedAt DateTime @map("issued_at") @db.Timestamptz(3)
+  paymentTermsDays Int @map("payment_terms_days")
+  paymentDueAt DateTime @map("payment_due_at") @db.Timestamptz(3)
+  currency String @db.VarChar(3)
+  totalAmount Decimal @map("total_amount") @db.Decimal(12, 2)
+  documentVersionId String @map("document_version_id") @db.Uuid
+  snapshot Json
+  idempotencyKey String @map("idempotency_key") @db.VarChar(100)
+  requestHash String @map("request_hash") @db.VarChar(64)
+  createdByUserId String @map("created_by_user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  submittedAt DateTime? @map("submitted_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  load Load @relation(fields: [loadId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  original CarrierInvoice? @relation("SupplementalInvoice", fields: [originalInvoiceId, organizationId, loadId], references: [id, organizationId, loadId], onDelete: Restrict, onUpdate: NoAction)
+  supplements CarrierInvoice[] @relation("SupplementalInvoice")
+  documentVersion DocumentVersion @relation(fields: [documentVersionId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  createdBy User @relation(fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  charges CarrierInvoiceCharge[]
+  payments LoadPayment[]
+  @@unique([id, organizationId, loadId])
+  @@unique([organizationId, invoiceNumber])
+  @@unique([organizationId, idempotencyKey])
+  @@unique([organizationId, documentVersionId])
+  @@index([organizationId, loadId, issuedAt])
+  @@index([organizationId, submittedAt, paymentDueAt])
+  @@map("carrier_invoices")
+}
+
+model CarrierInvoiceCharge {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  loadId String @map("load_id") @db.Uuid
+  invoiceId String @map("invoice_id") @db.Uuid
+  chargeOpportunityId String @map("charge_opportunity_id") @db.Uuid
+  amount Decimal @db.Decimal(12, 2)
+  currency String @db.VarChar(3)
+  description String
+  snapshot Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  invoice CarrierInvoice @relation(fields: [invoiceId, organizationId, loadId], references: [id, organizationId, loadId], onDelete: Restrict, onUpdate: NoAction)
+  opportunity LoadChargeOpportunity @relation(fields: [chargeOpportunityId, organizationId, loadId], references: [id, organizationId, loadId], onDelete: Restrict, onUpdate: NoAction)
+  @@unique([organizationId, chargeOpportunityId])
+  @@index([organizationId, invoiceId])
+  @@map("carrier_invoice_charges")
+}
+
+model Agreement {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  loadId         String          @map("load_id") @db.Uuid
+  type           AgreementType
+  status         AgreementStatus @default(DRAFT)
+  title          String
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  organization     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load             Load                        @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  versions         AgreementVersion[]
+  externalAccesses ExternalTransactionAccess[]
+
+  @@index([organizationId, loadId])
+  @@index([organizationId, status])
+  @@map("agreements")
+}
+
+model AgreementVersion {
+  id                      String   @id @default(uuid()) @db.Uuid
+  organizationId          String   @map("organization_id") @db.Uuid
+  agreementId             String   @map("agreement_id") @db.Uuid
+  sourceDocumentVersionId String?  @map("source_document_version_id") @db.Uuid
+  versionNumber           Int      @map("version_number")
+  contentHash             String   @map("content_hash") @db.VarChar(64)
+  terms                   Json
+  totalAmount             Decimal? @map("total_amount") @db.Decimal(12, 2)
+  currency                String   @default("USD") @db.VarChar(3)
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agreement             Agreement             @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  sourceDocumentVersion DocumentVersion?      @relation(fields: [sourceDocumentVersionId], references: [id], onDelete: SetNull)
+  acceptances           AgreementAcceptance[]
+
+  @@unique([agreementId, versionNumber])
+  @@index([organizationId, agreementId])
+  @@index([organizationId, contentHash])
+  @@map("agreement_versions")
+}
+
+model AgreementAcceptance {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  organizationId      String                    @map("organization_id") @db.Uuid
+  agreementVersionId  String                    @map("agreement_version_id") @db.Uuid
+  partyRole           AgreementPartyRole        @map("party_role")
+  method              AgreementAcceptanceMethod
+  acceptedByName      String                    @map("accepted_by_name")
+  acceptedByTitle     String?                   @map("accepted_by_title")
+  acceptedByEmail     String?                   @map("accepted_by_email")
+  consentText         String                    @map("consent_text")
+  signatureStorageKey String?                   @map("signature_storage_key")
+  providerEnvelopeId  String?                   @map("provider_envelope_id")
+  ipAddress           String?                   @map("ip_address")
+  userAgent           String?                   @map("user_agent")
+  acceptedAt          DateTime                  @default(now()) @map("accepted_at")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agreementVersion AgreementVersion @relation(fields: [agreementVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([agreementVersionId, partyRole])
+  @@index([organizationId, acceptedAt])
+  @@map("agreement_acceptances")
+}
+
+model ExternalTransactionAccess {
+  id             String                  @id @default(uuid()) @db.Uuid
+  organizationId String                  @map("organization_id") @db.Uuid
+  loadId         String                  @map("load_id") @db.Uuid
+  agreementId    String?                 @map("agreement_id") @db.Uuid
+  tokenHash      String                  @unique @map("token_hash") @db.VarChar(64)
+  recipientName  String?                 @map("recipient_name")
+  recipientEmail String?                 @map("recipient_email")
+  role           ExternalTransactionRole
+  permissions    Json?
+  expiresAt      DateTime                @map("expires_at")
+  revokedAt      DateTime?               @map("revoked_at")
+  lastAccessedAt DateTime?               @map("last_accessed_at")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  load         Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  agreement    Agreement?   @relation(fields: [agreementId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, loadId])
+  @@index([organizationId, role])
+  @@index([expiresAt])
+  @@map("external_transaction_access")
+}
+
+enum FinancialType {
+  INCOME
+  EXPENSE
+  PAYMENT
+  ADJUSTMENT
+  DRIVER_PAY
+}
+
+enum FinancialEffect {
+  INCOME
+  EXPENSE
+  PAYMENT
+}
+
+enum FinancialStatus {
+  POSTED
+  VOID
+}
+
+enum FinancialSource {
+  MANUAL
+  IMPORT
+}
+
+enum FinancialImportStatus {
+  DRAFT
+  PREVIEWED
+  CONFIRMED
+  REVERSED
+}
+
+model FinancialTransaction {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  type FinancialType
+  effect FinancialEffect
+  category String @db.VarChar(100)
+  amount Decimal @db.Decimal(12, 2)
+  currency String @default("USD") @db.VarChar(3)
+  transactionDate DateTime @map("transaction_date") @db.Date
+  description String @db.VarChar(500)
+  memo String? @db.VarChar(1000)
+  vendorName String? @map("vendor_name") @db.VarChar(200)
+  brokerName String? @map("broker_name") @db.VarChar(200)
+  loadId String? @map("load_id") @db.Uuid
+  driverId String? @map("driver_id") @db.Uuid
+  documentId String? @map("document_id") @db.Uuid
+  historicalLoadId String? @map("historical_load_id") @db.Uuid
+  importBatchId String? @map("import_batch_id") @db.Uuid
+  importRowNumber Int? @map("import_row_number")
+  sourceColumn String? @map("source_column") @db.VarChar(100)
+  correctionOfId String? @map("correction_of_id") @db.Uuid
+  source FinancialSource @default(MANUAL)
+  status FinancialStatus @default(POSTED)
+  idempotencyKey String @map("idempotency_key") @db.VarChar(100)
+  createdById String @map("created_by_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy User @relation(fields: [createdById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  load Load? @relation(fields: [loadId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  driver Driver? @relation(fields: [driverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  document Document? @relation(fields: [documentId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  historicalLoad HistoricalLoadRecord? @relation(fields: [historicalLoadId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  importBatch FinancialImportBatch? @relation(fields: [importBatchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  correctionOf FinancialTransaction? @relation("FinancialCorrection", fields: [correctionOfId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  corrections FinancialTransaction[] @relation("FinancialCorrection")
+  @@unique([id, organizationId])
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, transactionDate, type])
+  @@index([organizationId, category, transactionDate])
+  @@index([organizationId, loadId])
+  @@index([organizationId, driverId, transactionDate])
+  @@index([organizationId, importBatchId])
+  @@map("financial_transactions")
+}
+
+model FinancialImportBatch {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  fileName String @map("file_name") @db.VarChar(200)
+  fileChecksum String @map("file_checksum") @db.VarChar(64)
+  fileBytes Bytes @map("file_bytes")
+  mimeType String @map("mime_type") @db.VarChar(100)
+  headers Json
+  columnMapping Json @map("column_mapping")
+  counts Json
+  revision Int @default(0)
+  status FinancialImportStatus @default(DRAFT)
+  createdById String @map("created_by_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy User @relation(fields: [createdById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  rows FinancialImportRow[]
+  historicalLoads HistoricalLoadRecord[]
+  transactions FinancialTransaction[]
+  @@unique([id, organizationId])
+  @@unique([organizationId, fileChecksum])
+  @@index([organizationId, createdAt])
+  @@map("financial_import_batches")
+}
+
+model FinancialImportRow {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  batchId String @map("batch_id") @db.Uuid
+  rowNumber Int @map("row_number")
+  status String @db.VarChar(20)
+  normalizedData Json @map("normalized_data")
+  issues Json
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  batch FinancialImportBatch @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@unique([batchId, rowNumber])
+  @@unique([id, organizationId])
+  @@index([organizationId, batchId])
+  @@map("financial_import_rows")
+}
+
+model HistoricalLoadRecord {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  loadNumber String @map("load_number") @db.VarChar(100)
+  invoiceNumber String? @map("invoice_number") @db.VarChar(100)
+  brokerName String @map("broker_name") @db.VarChar(200)
+  deliveryDate DateTime @map("delivery_date") @db.Date
+  origin String? @db.VarChar(300)
+  destination String? @db.VarChar(300)
+  miles Decimal? @db.Decimal(10, 2)
+  driverName String? @map("driver_name") @db.VarChar(200)
+  truckReference String? @map("truck_reference") @db.VarChar(100)
+  grossRevenue Decimal @map("gross_revenue") @db.Decimal(12, 2)
+  paymentStatus String @map("payment_status") @db.VarChar(20)
+  dueDate DateTime? @map("due_date") @db.Date
+  importBatchId String @map("import_batch_id") @db.Uuid
+  importRowNumber Int @map("import_row_number")
+  status FinancialStatus @default(POSTED)
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  batch FinancialImportBatch @relation(fields: [importBatchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  transactions FinancialTransaction[]
+  @@unique([id, organizationId])
+  @@unique([organizationId, loadNumber])
+  @@unique([importBatchId, importRowNumber])
+  @@index([organizationId, deliveryDate])
+  @@map("historical_load_records")
+}
+
+model FinancialAuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  actorId String @map("actor_id") @db.Uuid
+  action String @db.VarChar(60)
+  recordId String @map("record_id") @db.Uuid
+  recordType String @map("record_type") @db.VarChar(30)
+  summary String @db.VarChar(500)
+  details Json
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor User @relation(fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@index([organizationId, createdAt])
+  @@index([organizationId, recordId])
+  @@map("financial_audit_events")
+}
+
+model DocumentSignature {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  loadId String @map("load_id") @db.Uuid
+  documentId String @map("document_id") @db.Uuid
+  documentVersionId String @map("document_version_id") @db.Uuid
+  documentType DocumentType @map("document_type")
+  signerName String @map("signer_name") @db.VarChar(120)
+  signerRole String @map("signer_role") @db.VarChar(16)
+  signatureStorageKey String @map("signature_storage_key")
+  signatureChecksum String @map("signature_checksum") @db.VarChar(64)
+  signedAt DateTime @default(now()) @map("signed_at")
+  createdByUserId String @map("created_by_user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  idempotencyKey String @map("idempotency_key") @db.VarChar(80)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  load Load @relation(fields: [loadId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "document_signatures_load_fkey")
+  version DocumentVersion @relation(fields: [documentVersionId, documentId, organizationId], references: [id, documentId, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "document_signatures_version_fkey")
+  link LoadDocument @relation(fields: [organizationId, loadId, documentId, documentType], references: [organizationId, loadId, documentId, role], onDelete: Restrict, onUpdate: NoAction, map: "document_signatures_link_fkey")
+  createdBy User @relation(fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction, map: "document_signatures_actor_fkey")
+  @@unique([organizationId, createdByUserId, idempotencyKey], map: "document_signatures_organization_id_created_by_user_id_idemp_ke")
+  @@unique([organizationId, signatureStorageKey])
+  @@index([organizationId, documentId, documentVersionId], map: "document_signatures_organization_id_document_id_document_ver_id")
+  @@map("document_signatures")
+}
+
+model DriverSettlement {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  driverId String @map("driver_id") @db.Uuid
+  originalSettlementId String? @map("original_settlement_id") @db.Uuid
+  kind String @db.VarChar(16)
+  state String @default("DRAFT") @db.VarChar(16)
+  revision Int @default(1)
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd DateTime @map("period_end") @db.Date
+  currency String @default("USD") @db.VarChar(3)
+  netAmount Decimal @map("net_amount") @db.Decimal(12, 2)
+  snapshot Json
+  createdById String @map("created_by_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  reviewedById String? @map("reviewed_by_id") @db.Uuid
+  reviewedAt DateTime? @map("reviewed_at")
+  reviewedRevision Int? @map("reviewed_revision")
+  approvedById String? @map("approved_by_id") @db.Uuid
+  approvedAt DateTime? @map("approved_at")
+  documentVersionId String? @map("document_version_id") @db.Uuid
+  cancelledById String? @map("cancelled_by_id") @db.Uuid
+  cancelledAt DateTime? @map("cancelled_at")
+  cancellationReason String? @map("cancellation_reason") @db.VarChar(1000)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  driver Driver @relation(fields: [driverId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  creator User @relation("SettlementCreator", fields: [createdById, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  reviewer User? @relation("SettlementReviewer", fields: [reviewedById, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  approver User? @relation("SettlementApprover", fields: [approvedById, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  canceller User? @relation("SettlementCanceller", fields: [cancelledById, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  documentVersion DocumentVersion? @relation(fields: [documentVersionId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  original DriverSettlement? @relation("SettlementAdjustments", fields: [originalSettlementId, organizationId, driverId, currency], references: [id, organizationId, driverId, currency], onDelete: Restrict, onUpdate: NoAction)
+  adjustments DriverSettlement[] @relation("SettlementAdjustments")
+  work DriverSettlementWork[]
+  items DriverSettlementItem[]
+  payments DriverSettlementPayment[]
+  @@unique([id, organizationId])
+  @@unique([id, organizationId, driverId, currency])
+  @@unique([organizationId, documentVersionId])
+  @@index([organizationId, driverId, periodStart])
+  @@map("driver_settlements")
+}
+
+model DriverSettlementWork {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  settlementId String @map("settlement_id") @db.Uuid
+  loadId String @map("load_id") @db.Uuid
+  completionEventId String @map("completion_event_id") @db.Uuid
+  sourceSnapshot Json @map("source_snapshot")
+  createdAt DateTime @default(now()) @map("created_at")
+  releasedAt DateTime? @map("released_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  settlement DriverSettlement @relation(fields: [settlementId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  load Load @relation(fields: [loadId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  completionEvent LoadEvent @relation(fields: [completionEventId, organizationId, loadId], references: [id, organizationId, loadId], onDelete: Restrict, onUpdate: NoAction)
+  items DriverSettlementItem[]
+  @@unique([id, organizationId, settlementId])
+  @@unique([organizationId, settlementId, loadId])
+  @@map("driver_settlement_work")
+}
+
+model DriverSettlementItem {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  settlementId String @map("settlement_id") @db.Uuid
+  position Int
+  workId String? @map("work_id") @db.Uuid
+  kind String @db.VarChar(16)
+  amount Decimal @db.Decimal(12, 2)
+  description String @db.VarChar(500)
+  snapshot Json
+  createdAt DateTime @default(now()) @map("created_at")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  settlement DriverSettlement @relation(fields: [settlementId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  work DriverSettlementWork? @relation(fields: [workId, organizationId, settlementId], references: [id, organizationId, settlementId], onDelete: Restrict, onUpdate: NoAction)
+  @@unique([organizationId, settlementId, position])
+  @@map("driver_settlement_items")
+}
+
+model DriverSettlementPayment {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  settlementId String @map("settlement_id") @db.Uuid
+  amount Decimal @db.Decimal(12, 2)
+  currency String @db.VarChar(3)
+  paymentDate DateTime @map("payment_date") @db.Date
+  method String @db.VarChar(20)
+  reference String? @db.VarChar(200)
+  recordedById String @map("recorded_by_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  idempotencyKey String @map("idempotency_key") @db.Uuid
+  requestHash String @map("request_hash") @db.Char(64)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  settlement DriverSettlement @relation(fields: [settlementId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  recorder User @relation(fields: [recordedById, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: NoAction)
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, settlementId, paymentDate])
+  @@map("driver_settlement_payments")
+}
+
+model StaffInvitation {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  email String @db.VarChar(254)
+  role UserRole
+  status String @default("PENDING") @db.VarChar(16)
+  tokenHash String @unique @map("token_hash") @db.Char(64)
+  invitedById String @map("invited_by_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+  acceptedAt DateTime? @map("accepted_at")
+  acceptedById String? @map("accepted_by_id") @db.Uuid
+  revokedAt DateTime? @map("revoked_at")
+  revokedById String? @map("revoked_by_id") @db.Uuid
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  inviter User @relation("StaffInviter",fields:[invitedById,organizationId],references:[id,organizationId],onDelete:Restrict,onUpdate:NoAction)
+  acceptor User? @relation("StaffAcceptor",fields:[acceptedById,organizationId],references:[id,organizationId],onDelete:Restrict,onUpdate:NoAction)
+  revoker User? @relation("StaffRevoker",fields:[revokedById,organizationId],references:[id,organizationId],onDelete:Restrict,onUpdate:NoAction)
+  @@unique([id,organizationId])
+  @@index([organizationId,status])
+  @@map("staff_invitations")
+}

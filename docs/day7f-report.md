@@ -1,0 +1,11 @@
+# Day 7F — Billing and Payment Integrity
+
+Implementation complete. Migration `20260920053000_add_payment_ledger` adds LoadPayment with Decimal(12,2), positive-amount constraint, composite tenant foreign keys and unique organization/load/idempotency key. Five positive historical payment values were copied into legacy ledger entries without changing existing loads, events or account mappings. Unknown historical actors remain null; new entries always record the authenticated user.
+
+Billing submission locks and rereads the load and canonical policy inside one transaction. Payments use the same load lock, check the ledger against the cached balance, append one entry and event, and atomically update cumulative paid amount. Partial payment leaves INVOICED with null paidAt; exact settlement becomes PAID; overpayment and a new payment on PAID are rejected. Identical UUID operation-key retries return the original logical result without another entry/event; conflicting payload reuse returns 409.
+
+POST /back-office/accounts-receivable/loads/:loadId/mark-paid now requires explicit amountPaid and idempotencyKey. The operation key in the body is the equivalent of an Idempotency-Key header. A/R reports Total/Paid/Remaining and sums remaining outstanding/overdue balances. The browser keeps the key through a lost-response retry and offers partial/final payment entry. Owner A/R metrics subtract cumulative payments.
+
+Checks: API/web typecheck, lint/build pass; full HTTP suite 173/173 passes. Payment browser test passes, including a simulated committed payment whose response fails. Real database tests prove one billing event under duplicate submission, both independent partial payments survive concurrency, duplicate final payment commits once, and competing payments cannot overpay. Isolated test records were removed; all pre-existing records and ledger entries matched baseline fingerprints afterward. Last unit checkpoint: 57/57 passed in phase 7E; final release reruns all checks.
+
+Files: schema/payment-ledger migration; accounts-receivable.service.ts, record-payment.dto.ts, owner-dashboard.service.ts; web A/R page; payments.e2e-spec.ts, payments.database.ts, web/payments.spec.ts, auth test/fixture updates. Billing locking was integrated during phase 7E.

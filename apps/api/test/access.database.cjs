@@ -1,0 +1,12 @@
+const path = require('node:path');
+const fs = require('node:fs');
+const target = new URL(process.env.DATABASE_URL || 'postgresql://invalid/invalid');
+if (process.env.RUN_ACCESS_TESTS !== '1' || target.hostname !== '127.0.0.1' || target.port !== '55439' || target.pathname !== '/loadpacket_finance_verified_test') throw Error('Explicit isolated access test target required');
+const evidence = path.resolve(__dirname, '../../../test-results/access');
+fs.mkdirSync(evidence, { recursive: true });
+process.chdir(evidence);
+if (fs.existsSync('.env')) throw Error('Test directory must not contain .env');
+process.env.DOCUMENT_STORAGE_ROOT = path.join(evidence, 'documents');
+process.env.NODE_ENV = 'test';
+require('ts-node').register({ project: path.resolve(__dirname, '../tsconfig.json'), experimentalResolver: true });
+require('./access.database.ts');

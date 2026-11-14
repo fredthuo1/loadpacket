@@ -1,15 +1,16 @@
 import Link from "next/link";
+
 import RateConUpload from "./ratecon-upload";
 
 export default function NewLoadPage() {
   return (
     <main className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div>
             <Link
               href="/"
-              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900"
             >
               ← Dashboard
             </Link>
@@ -19,22 +20,21 @@ export default function NewLoadPage() {
             </h1>
           </div>
 
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <p className="font-semibold text-slate-900">LoadPacket</p>
-            <p className="text-sm text-slate-500">
-              From paperwork to payment.
-            </p>
+
+            <p className="text-xs text-slate-600">Carrier Operations</p>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-600">
             Smart Load Intake
           </p>
 
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             How would you like to create this load?
           </h2>
 
@@ -42,12 +42,14 @@ export default function NewLoadPage() {
             Upload a Rate Confirmation and LoadPacket will extract the load
             details for you, or enter the information manually.
           </p>
+          <ol aria-label="Rate Confirmation steps" className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-slate-600">
+            <li>1. Upload</li><li>2. Extract</li><li>3. Review</li><li>4. Create Load</li>
+          </ol>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Smart upload */}
-          <section className="rounded-2xl border-2 border-slate-900 bg-white p-7 shadow-sm">
-            <div className="mb-6 inline-flex rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+          <section className="min-w-0 rounded-2xl border border-blue-300 bg-white p-5 shadow-sm sm:p-6">
+            <div className="mb-6 inline-flex rounded-lg bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-800">
               Recommended
             </div>
 
@@ -63,7 +65,7 @@ export default function NewLoadPage() {
             <RateConUpload />
 
             <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                 LoadPacket will look for
               </p>
 
@@ -78,8 +80,7 @@ export default function NewLoadPage() {
             </div>
           </section>
 
-          {/* Manual */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-6 inline-flex rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
               Manual
             </div>
@@ -89,57 +90,45 @@ export default function NewLoadPage() {
             </h3>
 
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Enter the load information yourself if you don&apos;t have a
-              Rate Confirmation or prefer manual entry.
+              Don&apos;t have a Rate Confirmation yet? Enter the load, route,
+              rate, and paperwork requirements yourself.
             </p>
 
-            <div className="mt-6 space-y-4 rounded-xl bg-slate-50 p-5">
-              <ManualField label="Load number" value="#58291" />
-              <ManualField label="Broker" value="ABC Logistics" />
-              <ManualField label="Rate" value="$3,450" />
-              <ManualField
-                label="Route"
-                value="St. Louis, MO → Dallas, TX"
-              />
+            <div className="mt-6 rounded-xl bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-900">
+                Manual entry includes
+              </p>
+
+              <div className="mt-4 space-y-3 text-sm text-slate-600">
+                <p>✓ Load and broker details</p>
+                <p>✓ Pickup and delivery</p>
+                <p>✓ Load rate</p>
+                <p>✓ Equipment</p>
+                <p>✓ Required paperwork</p>
+              </div>
             </div>
 
-            <button
-              type="button"
-              className="mt-6 w-full rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+            <Link
+              href="/loads/new/manual"
+              className="mt-6 flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
             >
               Create Manually
-            </button>
+            </Link>
           </section>
         </div>
 
         <div className="mt-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
           <p className="font-semibold text-slate-900">
-            You stay in control.
+            Two ways in. One load workflow.
           </p>
 
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            AI-extracted information is never automatically approved. You will
-            review and correct the load details before LoadPacket creates the
-            final load.
+            Whether a load starts from a Rate Confirmation or manual entry, it
+            becomes the same LoadPacket load and can be assigned to a driver,
+            tracked, documented, and billed.
           </p>
         </div>
       </div>
     </main>
-  );
-}
-
-type ManualFieldProps = {
-  label: string;
-  value: string;
-};
-
-function ManualField({ label, value }: ManualFieldProps) {
-  return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-slate-800">{value}</p>
-    </div>
   );
 }

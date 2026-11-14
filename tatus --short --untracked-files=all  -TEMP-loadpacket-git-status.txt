@@ -1,0 +1,59 @@
+warning: in the working copy of 'apps/api/package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/src/app.controller.spec.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/src/app.controller.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/src/app.module.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/src/documents/documents.controller.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/src/documents/documents.module.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/src/documents/documents.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/src/main.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/test/app.e2e-spec.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/tsconfig.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/eslint.config.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/next.config.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/app/globals.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/app/loads/new/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/app/loads/new/ratecon-upload.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/app/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/tsconfig.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pnpm-lock.yaml', LF will be replaced by CRLF the next time Git touches it
+ .gitignore                                     |    8 [32m+[m[31m-[m
+ apps/api/README.md                             |   98 [31m-[m
+ apps/api/eslint.config.mjs                     |    2 [32m+[m[31m-[m
+ apps/api/package.json                          |   33 [32m+[m[31m-[m
+ apps/api/src/app.controller.spec.ts            |   67 [32m+[m[31m-[m
+ apps/api/src/app.controller.ts                 |   45 [32m+[m[31m-[m
+ apps/api/src/app.module.ts                     |   30 [32m+[m[31m-[m
+ apps/api/src/app.service.ts                    |    8 [31m-[m
+ apps/api/src/documents/documents.controller.ts |   75 [32m+[m[31m-[m
+ apps/api/src/documents/documents.module.ts     |   58 [32m+[m[31m-[m
+ apps/api/src/documents/documents.service.ts    |  272 [32m+[m[31m-[m
+ apps/api/src/main.ts                           |   35 [32m+[m[31m-[m
+ apps/api/test/app.e2e-spec.ts                  |   96 [32m+[m[31m-[m
+ apps/api/test/jest-e2e.json                    |   23 [32m+[m[31m-[m
+ apps/api/tsconfig.json                         |    1 [32m+[m
+ apps/web/.gitignore                            |    1 [32m+[m
+ apps/web/README.md                             |   36 [31m-[m
+ apps/web/eslint.config.mjs                     |    3 [32m+[m
+ apps/web/next.config.ts                        |    3 [32m+[m[31m-[m
+ apps/web/package.json                          |    7 [32m+[m[31m-[m
+ apps/web/pnpm-lock.yaml                        | 4289 [31m------------[m
+ apps/web/pnpm-workspace.yaml                   |    3 [31m-[m
+ apps/web/public/file.svg                       |    1 [31m-[m
+ apps/web/public/globe.svg                      |    1 [31m-[m
+ apps/web/public/next.svg                       |    1 [31m-[m
+ apps/web/public/vercel.svg                     |    1 [31m-[m
+ apps/web/public/window.svg                     |    1 [31m-[m
+ apps/web/src/app/globals.css                   |   46 [32m+[m[31m-[m
+ apps/web/src/app/layout.tsx                    |    7 [32m+[m[31m-[m
+ apps/web/src/app/loads/new/page.tsx            |   87 [32m+[m[31m-[m
+ apps/web/src/app/loads/new/ratecon-upload.tsx  |  150 [32m+[m[31m-[m
+ apps/web/src/app/page.tsx                      |  625 [32m+[m[31m-[m
+ apps/web/tsconfig.json                         |   18 [32m+[m[31m-[m
+ package.json                                   |   10 [32m+[m[31m-[m
+ pnpm-lock.yaml                                 | 8457 [32m++++++++++++++++++++++[m[31m--[m
+ pnpm-workspace.yaml                            |    6 [32m+[m[31m-[m
+ 36 files changed, 9309 insertions(+), 5295 deletions(-)

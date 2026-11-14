@@ -5,3 +5,7 @@ packages:
 allowBuilds:
   unrs-resolver: true
   "@parcel/watcher": true
+  "@prisma/engines": true
+  esbuild: true
+  prisma: true
+  tesseract.js: false

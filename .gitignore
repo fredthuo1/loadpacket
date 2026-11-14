@@ -10,6 +10,7 @@ node_modules/
 dist/
 build/
 .next/
+.next-auth-test/
 out/
 .turbo/
 
@@ -32,13 +33,14 @@ pnpm-debug.log*
 *.sqlite
 *.sqlite3
 
-# OS
+# Operating system
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE / editor
 .vscode/
 .idea/
+.vs/
 
 # Secrets / certificates
 *.pem

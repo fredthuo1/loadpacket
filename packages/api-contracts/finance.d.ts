@@ -1,0 +1,56 @@
+export type FinanceTransaction = {
+  id: string;
+  date: string;
+  type: string;
+  effect: "INCOME" | "EXPENSE" | "PAYMENT";
+  category: string;
+  amount: string;
+  description: string;
+  source: string;
+  status: string;
+  loadId: string | null;
+  loadNumber: string | null;
+  driverId: string | null;
+  driverName: string | null;
+  brokerName: string | null;
+  documentId: string | null;
+  importBatchId: string | null;
+  importRowNumber: number | null;
+  sourceColumn: string | null;
+  historicalLoadId: string | null;
+};
+export type FinanceOverview = {
+  revenue: string;
+  expenses: string;
+  net: string;
+  collected: string;
+  outstanding: string;
+  transactionCount: number;
+  recordedLoads: number;
+  averageRevenuePerLoad: string | null;
+  revenuePerMile: null;
+  costPerMile: null;
+  profitPerMile: null;
+  trend: { month: string; revenue: string; expenses: string; net: string }[];
+  categories: { category: string; effect: string; amount: string }[];
+  aging: { bucket: string; amount: string; count: number }[];
+};
+export type ImportBatch = {
+  id: string;
+  fileName: string;
+  fileChecksum: string;
+  status: string;
+  revision: number;
+  headers: string[];
+  columnMapping: Record<string, string>;
+  counts: Record<string, number>;
+  createdAt: string;
+  completedAt: string | null;
+  duplicate?: boolean;
+  rows?: {
+    rowNumber: number;
+    status: string;
+    normalizedData: Record<string, string>;
+    issues: string[];
+  }[];
+};
